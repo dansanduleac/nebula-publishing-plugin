@@ -26,21 +26,27 @@ class MavenCompileOnlyPlugin implements Plugin<Project> {
     void apply(Project project) {
         project.plugins.apply MavenBasePublishPlugin
 
-        project.publishing {
-            publications {
-                withType(MavenPublication) {
-                    pom.withXml { XmlProvider xml ->
-                        project.plugins.withType(JavaBasePlugin) {
-                            def root = xml.asNode()
-                            def dependencies = project.configurations.compileOnly.dependencies
-                            if (dependencies.size() > 0) {
-                                def deps = root.dependencies ? root.dependencies[0] : root.appendNode('dependencies')
-                                dependencies.each { dep ->
-                                    deps.appendNode('dependency').with {
-                                        appendNode('groupId', dep.group)
-                                        appendNode('artifactId', dep.name)
-                                        appendNode('version', dep.version)
-                                        appendNode('scope', 'provided')
+        project.pluginManager.withPlugin('java') {
+            project.publishing {
+                publications {
+                    withType(MavenPublication) { publication ->
+                        publication.pom.withXml { XmlProvider xml ->
+                            // Only configure publications that publish the java component
+                            if (publication.component != project.components.java) {
+                                return
+                            }
+                            project.plugins.withType(JavaBasePlugin) {
+                                def root = xml.asNode()
+                                def dependencies = project.configurations.compileOnly.dependencies
+                                if (dependencies.size() > 0) {
+                                    def deps = root.dependencies ? root.dependencies[0] : root.appendNode('dependencies')
+                                    dependencies.each { dep ->
+                                        deps.appendNode('dependency').with {
+                                            appendNode('groupId', dep.group)
+                                            appendNode('artifactId', dep.name)
+                                            appendNode('version', dep.version)
+                                            appendNode('scope', 'provided')
+                                        }
                                     }
                                 }
                             }
